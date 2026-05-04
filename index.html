@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --line: #e3e6ee;
+    --text: #1c1f2a;
+    --muted: #6b7081;
+    --primary: #2d6df6;
+    --primary-fg: #ffffff;
+    --danger: #c62828;
+    --me-bubble: #d8e6ff;
+    --them-bubble: #eef0f6;
+    --hover: #f0f3fa;
+    --active: #e6efff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+  .banner {
+    background: var(--primary);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .brand { font-weight: 700; font-size: 16px; }
+  .tag { opacity: 0.9; font-size: 12px; }
+  .layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 0;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .me { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .me #me-name { font-weight: 600; }
+  .small { font-size: 12px; }
+  .muted { color: var(--muted); }
+  .actions {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .actions button {
+    flex: 1;
+    min-width: 70px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+  }
+  .actions button:hover { background: var(--hover); }
+  .conv-list { flex: 1; overflow-y: auto; }
+  .conv-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .conv-item:hover { background: var(--hover); }
+  .conv-item.active { background: var(--active); }
+  .conv-item .ct { font-weight: 600; }
+  .conv-item .cs { color: var(--muted); font-size: 12px; }
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .conv-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    gap: 12px;
+  }
+  .conv-header #conv-title { font-weight: 600; }
+  .conv-actions button {
+    margin-left: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+  }
+  .conv-actions button:hover { background: var(--hover); }
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .msg {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .msg.me { align-self: flex-end; background: var(--me-bubble); }
+  .msg.them { align-self: flex-start; background: var(--them-bubble); }
+  .msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .composer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .composer input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: inherit;
+  }
+  .composer button {
+    padding: 0 16px;
+    border: none;
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+  }
+  .composer button:disabled { opacity: 0.6; cursor: wait; }
+  .error {
+    padding: 6px 16px;
+    color: var(--danger);
+    font-size: 12px;
+    min-height: 18px;
+    background: var(--surface);
+  }
+  .foot {
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    padding: 8px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal.hidden { display: none; }
+  .modal-body {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    min-width: 320px;
+    max-width: 480px;
+    width: 90%;
+  }
+  .modal-title { font-weight: 700; margin-bottom: 12px; }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+  .modal-actions button {
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .modal-actions button.primary {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+  }
+  .modal-content label {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .modal-content input,
+  .modal-content textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-top: 4px;
+    font: inherit;
+  }
+  .blocked-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .blocked-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .blocked-list button {
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+  @media (max-width: 640px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .layout.show-sidebar .sidebar { display: flex; }
+    .layout.show-sidebar .main { display: none; }
+  }
+</style>
+
+</head>
+<body>
+  <header class="banner">
+    <div class="brand">SafeChat</div>
+    <div class="tag">Built for safe school communication.</div>
+  </header>
+
+  <div id="app" class="layout">
+    <aside class="sidebar">
+      <div class="me">
+        <div id="me-name">…</div>
+        <div id="me-email" class="muted small"></div>
+      </div>
+      <div class="actions">
+        <button id="new-dm">New DM</button>
+        <button id="new-group">New Group</button>
+        <button id="open-blocks">Blocked</button>
+      </div>
+      <div class="conv-list" id="conv-list">
+        <div class="empty">Loading…</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="conv-header">
+        <div id="conv-title">Select a conversation</div>
+        <div class="conv-actions" id="conv-actions" style="display:none">
+          <button id="add-member">Add member</button>
+          <button id="leave-conv">Leave</button>
+        </div>
+      </div>
+      <div id="messages" class="messages"></div>
+      <div id="error" class="error"></div>
+      <form id="composer" class="composer" style="display:none">
+        <input id="msg-input" type="text" maxlength="500" autocomplete="off"
+               placeholder="Type a school-appropriate message…" />
+        <button type="submit">Send</button>
+      </form>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-body">
+      <div id="modal-title" class="modal-title"></div>
+      <div id="modal-content"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-ok" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    Messages travel over Google's HTTPS, are protected by Google Workspace at-rest encryption,
+    and are restricted to your school's domain. A server-side filter blocks inappropriate language. Be kind.
+  </footer>
+
+  <script>
+(function () {
+  const ui = {
+    convList: document.getElementById('conv-list'),
+    messages: document.getElementById('messages'),
+    composer: document.getElementById('composer'),
+    msgInput: document.getElementById('msg-input'),
+    convTitle: document.getElementById('conv-title'),
+    convActions: document.getElementById('conv-actions'),
+    addMember: document.getElementById('add-member'),
+    leaveConv: document.getElementById('leave-conv'),
+    error: document.getElementById('error'),
+    meName: document.getElementById('me-name'),
+    meEmail: document.getElementById('me-email'),
+    newDm: document.getElementById('new-dm'),
+    newGroup: document.getElementById('new-group'),
+    openBlocks: document.getElementById('open-blocks'),
+    modal: document.getElementById('modal'),
+    modalTitle: document.getElementById('modal-title'),
+    modalContent: document.getElementById('modal-content'),
+    modalOk: document.getElementById('modal-ok'),
+    modalCancel: document.getElementById('modal-cancel'),
+  };
+
+  const state = {
+    me: null,
+    conversations: [],
+    activeConv: null,
+    lastTs: 0,
+    pollHandle: null,
+    seenIds: {},
+  };
+
+  function call(name, args) {
+    return new Promise(function (resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(function (err) { reject(err); })
+        [name](args || {});
+    });
+  }
+
+  function setError(msg) {
+    ui.error.textContent = msg || '';
+    if (msg) {
+      const captured = msg;
+      setTimeout(function () {
+        if (ui.error.textContent === captured) ui.error.textContent = '';
+      }, 5000);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function openModal(opts) {
+    ui.modalTitle.textContent = opts.title || '';
+    ui.modalContent.innerHTML = opts.content || '';
+    ui.modalOk.textContent = opts.ok || 'OK';
+    ui.modalCancel.textContent = opts.cancel || 'Cancel';
+    ui.modal.classList.remove('hidden');
+    if (typeof opts.onShow === 'function') opts.onShow();
+    return new Promise(function (resolve) {
+      function done(ok) {
+        ui.modalOk.onclick = null;
+        ui.modalCancel.onclick = null;
+        ui.modal.classList.add('hidden');
+        resolve(ok);
+      }
+      ui.modalOk.onclick = function () { done(true); };
+      ui.modalCancel.onclick = function () { done(false); };
+    });
+  }
+
+  async function init() {
+    try {
+      state.me = await call('api_me');
+      ui.meName.textContent = state.me.name;
+      ui.meEmail.textContent = state.me.email;
+      await refreshConversations();
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  }
+
+  async function refreshConversations() {
+    state.conversations = await call('api_listConversations');
+    renderConvList();
+  }
+
+  function renderConvList() {
+    ui.convList.innerHTML = '';
+    if (!state.conversations.length) {
+      ui.convList.innerHTML =
+        '<div class="empty">No conversations yet.<br>Start a DM or group above.</div>';
+      return;
+    }
+    const sorted = state.conversations.slice().sort(function (a, b) {
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    sorted.forEach(function (c) {
+      const div = document.createElement('div');
+      const isActive = state.activeConv && state.activeConv.convId === c.convId;
+      div.className = 'conv-item' + (isActive ? ' active' : '');
+      const title = c.type === 'dm'
+        ? (c.members.find(function (m) { return m !== state.me.email; }) || '(self)')
+        : (c.name || 'Group');
+      const sub = c.type === 'dm' ? 'Direct message' : (c.members.length + ' members');
+      const titleEl = document.createElement('div');
+      titleEl.className = 'ct';
+      titleEl.textContent = title;
+      const subEl = document.createElement('div');
+      subEl.className = 'cs';
+      subEl.textContent = sub;
+      div.appendChild(titleEl);
+      div.appendChild(subEl);
+      div.onclick = function () { openConversation(c); };
+      ui.convList.appendChild(div);
+    });
+  }
+
+  async function openConversation(c) {
+    state.activeConv = c;
+    state.lastTs = 0;
+    state.seenIds = {};
+    renderConvList();
+    ui.convTitle.textContent = c.type === 'dm'
+      ? (c.members.find(function (m) { return m !== state.me.email; }) || '(self)')
+      : (c.name || 'Group');
+    ui.convActions.style.display = 'flex';
+    ui.composer.style.display = 'flex';
+    ui.addMember.style.display = c.type === 'dm' ? 'none' : '';
+    ui.messages.innerHTML = '';
+    if (state.pollHandle) clearInterval(state.pollHandle);
+    await pollMessages();
+    state.pollHandle = setInterval(pollMessages, 3000);
+    ui.msgInput.focus();
+  }
+
+  async function pollMessages() {
+    if (!state.activeConv) return;
+    try {
+      const newMsgs = await call('api_listMessages', {
+        convId: state.activeConv.convId,
+        sinceMs: state.lastTs
+      });
+      if (!newMsgs.length) return;
+      let added = false;
+      newMsgs.forEach(function (m) {
+        if (state.seenIds[m.msgId]) return;
+        state.seenIds[m.msgId] = 1;
+        if (m.timestamp > state.lastTs) state.lastTs = m.timestamp;
+        appendMessage(m);
+        added = true;
+      });
+      if (added) ui.messages.scrollTop = ui.messages.scrollHeight;
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  }
+
+  function appendMessage(m) {
+    const div = document.createElement('div');
+    const isMe = m.sender === state.me.email;
+    div.className = 'msg ' + (isMe ? 'me' : 'them');
+    const time = new Date(m.timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = (isMe ? 'You' : m.sender) + ' · ' + time;
+    const body = document.createElement('div');
+    body.textContent = m.text;
+    div.appendChild(meta);
+    div.appendChild(body);
+    ui.messages.appendChild(div);
+  }
+
+  ui.composer.onsubmit = async function (e) {
+    e.preventDefault();
+    const text = ui.msgInput.value.trim();
+    if (!text || !state.activeConv) return;
+    ui.msgInput.disabled = true;
+    try {
+      await call('api_sendMessage', { convId: state.activeConv.convId, text: text });
+      ui.msgInput.value = '';
+      await pollMessages();
+    } catch (err) {
+      setError(err && err.message ? err.message : String(err));
+    } finally {
+      ui.msgInput.disabled = false;
+      ui.msgInput.focus();
+    }
+  };
+
+  ui.newDm.onclick = async function () {
+    const ok = await openModal({
+      title: 'New direct message',
+      content:
+        '<div class="modal-content">' +
+        '<label>Their school email</label>' +
+        '<input id="dm-email" type="email" placeholder="name@school.edu" autofocus>' +
+        '</div>'
+    });
+    if (!ok) return;
+    const email = (document.getElementById('dm-email') || {}).value || '';
+    if (!email.trim()) return;
+    try {
+      const res = await call('api_createConversation', {
+        type: 'dm',
+        members: [email.trim()]
+      });
+      await refreshConversations();
+      const c = state.conversations.find(function (x) { return x.convId === res.convId; });
+      if (c) openConversation(c);
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  };
+
+  ui.newGroup.onclick = async function () {
+    const ok = await openModal({
+      title: 'New group chat',
+      content:
+        '<div class="modal-content">' +
+        '<label>Group name</label>' +
+        '<input id="g-name" placeholder="e.g. Project Team" autofocus>' +
+        '<label>Member emails (comma-separated)</label>' +
+        '<textarea id="g-members" rows="3" placeholder="a@school.edu, b@school.edu"></textarea>' +
+        '</div>'
+    });
+    if (!ok) return;
+    const name = (document.getElementById('g-name') || {}).value || '';
+    const raw = (document.getElementById('g-members') || {}).value || '';
+    const members = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!name.trim() || !members.length) {
+      setError('Group needs a name and at least one member.');
+      return;
+    }
+    try {
+      const res = await call('api_createConversation', {
+        type: 'group',
+        name: name.trim(),
+        members: members
+      });
+      await refreshConversations();
+      const c = state.conversations.find(function (x) { return x.convId === res.convId; });
+      if (c) openConversation(c);
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  };
+
+  ui.addMember.onclick = async function () {
+    if (!state.activeConv) return;
+    const ok = await openModal({
+      title: 'Invite to group',
+      content:
+        '<div class="modal-content">' +
+        '<label>Their school email</label>' +
+        '<input id="inv-email" type="email" autofocus>' +
+        '</div>'
+    });
+    if (!ok) return;
+    const email = (document.getElementById('inv-email') || {}).value || '';
+    if (!email.trim()) return;
+    try {
+      const res = await call('api_addMember', {
+        convId: state.activeConv.convId,
+        member: email.trim()
+      });
+      state.activeConv.members = res.members;
+      await refreshConversations();
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  };
+
+  ui.leaveConv.onclick = async function () {
+    if (!state.activeConv) return;
+    const ok = await openModal({
+      title: 'Leave conversation?',
+      content:
+        '<div class="modal-content">You will no longer receive messages from this chat.</div>',
+      ok: 'Leave'
+    });
+    if (!ok) return;
+    try {
+      await call('api_leaveConversation', { convId: state.activeConv.convId });
+      state.activeConv = null;
+      ui.composer.style.display = 'none';
+      ui.convActions.style.display = 'none';
+      ui.convTitle.textContent = 'Select a conversation';
+      ui.messages.innerHTML = '';
+      if (state.pollHandle) clearInterval(state.pollHandle);
+      await refreshConversations();
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  };
+
+  ui.openBlocks.onclick = async function () {
+    try { state.me = await call('api_me'); } catch (e) {}
+    function renderList() {
+      const list = (state.me.blocked || []).map(function (b) {
+        return '<li><span>' + escapeHtml(b) + '</span>' +
+               '<button data-unblock="' + escapeHtml(b) + '">Unblock</button></li>';
+      }).join('') || '<li class="muted">No one blocked.</li>';
+      return '<ul class="blocked-list">' + list + '</ul>';
+    }
+    const ok = await openModal({
+      title: 'Blocked users',
+      ok: 'Block',
+      cancel: 'Close',
+      content:
+        '<div class="modal-content">' +
+        '<div id="blocked-list-wrap">' + renderList() + '</div>' +
+        '<label>Block someone new</label>' +
+        '<input id="block-email" type="email" placeholder="name@school.edu">' +
+        '</div>',
+      onShow: function () {
+        document.getElementById('blocked-list-wrap').addEventListener('click', async function (e) {
+          const target = e.target.closest('[data-unblock]');
+          if (!target) return;
+          const member = target.getAttribute('data-unblock');
+          try {
+            await call('api_unblockUser', { member: member });
+            state.me = await call('api_me');
+            document.getElementById('blocked-list-wrap').innerHTML = renderList();
+          } catch (err) {
+            setError(err && err.message ? err.message : String(err));
+          }
+        });
+      }
+    });
+    if (!ok) return;
+    const email = (document.getElementById('block-email') || {}).value || '';
+    if (!email.trim()) return;
+    try {
+      await call('api_blockUser', { member: email.trim() });
+      state.me = await call('api_me');
+    } catch (e) {
+      setError(e && e.message ? e.message : String(e));
+    }
+  };
+
+  init();
+})();
+</script>
+
+</body>
+</html>
