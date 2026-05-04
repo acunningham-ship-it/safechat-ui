@@ -176,6 +176,7 @@
     .msg.them { background: var(--them-bubble); color: var(--them-bubble-fg); border-top-left-radius: 4px; }
     .msg.me { background: var(--me-bubble); color: var(--me-bubble-fg); border-top-right-radius: 4px; }
     .msg.deleted { font-style: italic; opacity: 0.6; }
+    .msg.pending { opacity: 0.7; }
     .msg .edited-tag { font-size: 10px; opacity: 0.7; margin-left: 6px; }
     .msg .reply-quote {
       font-size: 12px; opacity: 0.85; padding: 5px 8px;
@@ -366,7 +367,7 @@
 </header>
 
 <div id="bekind" class="bekind hidden">
-  <span><strong>Be kind.</strong> Messages are filtered for safety, and a teacher can review reported messages. Treat others how you'd want to be treated.</span>
+  <span><strong>Be kind.</strong> Messages are filtered for safety. Treat others how you'd want to be treated.</span>
   <button id="bekind-close" class="bekind-close" aria-label="Dismiss">Got it</button>
 </div>
 
@@ -444,8 +445,7 @@
 
 <footer class="foot">
   Messages travel over Google's HTTPS, are stored with Google Workspace at-rest encryption,
-  and are restricted to your school's domain. A server-side filter blocks inappropriate language and personal info.
-  Reports are reviewed by a teacher.
+  and are restricted to your school's domain. A server-side filter blocks inappropriate language.
 </footer>
 
 <div id="modal" class="modal-overlay hidden">
@@ -638,7 +638,7 @@
       ui.meAvatar.outerHTML = avatarFor(state.me.email, state.me.name).replace('class="avatar"', 'class="avatar" id="me-avatar"');
       ui.meAvatar = $('me-avatar');
       await refreshConversations();
-      state.convPoll = setInterval(refreshConversations, 10000);
+      state.convPoll = setInterval(refreshConversations, 5000);
     } catch (e) { err(e); }
   }
 
@@ -772,7 +772,7 @@
     renderConvList();
     if (state.msgPoll) clearInterval(state.msgPoll);
     await pollMessages(true);
-    state.msgPoll = setInterval(() => pollMessages(false), 3000);
+    state.msgPoll = setInterval(() => pollMessages(false), 1000);
     ui.msgInput.focus();
     await markRead();
   }
@@ -854,6 +854,7 @@
     if (m.deletedAt) {
       return '<div class="msg ' + (isMe ? 'me' : 'them') + ' deleted" data-msg="' + escapeHtml(m.msgId) + '">message deleted</div>';
     }
+    const pendingClass = m.pending ? ' pending' : '';
     let reply = '';
     if (m.replyToId && state.messagesById[m.replyToId]) {
       const rm = state.messagesById[m.replyToId];
@@ -878,7 +879,7 @@
         (isMe ? '<button class="msg-action" data-act="delete" data-msg="' + escapeHtml(m.msgId) + '" title="Delete">\u{1F5D1}</button>' : '') +
         (!isMe ? '<button class="msg-action" data-act="report" data-msg="' + escapeHtml(m.msgId) + '" title="Report">⚠</button>' : '') +
       '</div>';
-    return '<div class="msg ' + (isMe ? 'me' : 'them') + '" data-msg="' + escapeHtml(m.msgId) + '">' +
+    return '<div class="msg ' + (isMe ? 'me' : 'them') + pendingClass + '" data-msg="' + escapeHtml(m.msgId) + '">' +
       reply +
       '<span class="msg-text">' + escapeHtml(m.text || '') + '</span>' + editTag +
       actions +
@@ -989,7 +990,7 @@
     if (!ok) return;
     const why = ($('rep-why')||{}).value || 'other';
     const detail = ($('rep-detail')||{}).value || '';
-    try { await call('api_reportMessage', { msgId, reason: why + (detail ? ' — ' + detail : '') }); toast('Reported. A teacher will review.', 'success'); }
+    try { await call('api_reportMessage', { msgId, reason: why + (detail ? ' — ' + detail : '') }); toast('Reported.', 'success'); }
     catch (e) { err(e); }
   }
 
@@ -1014,14 +1015,37 @@
     const text = ui.msgInput.value.trim();
     if (!text || !state.activeConv) return;
     ui.sendBtn.disabled = true;
+    const tempId = 'temp_' + Date.now();
+    const optimisticMsg = {
+      msgId: tempId,
+      convId: state.activeConv.convId,
+      sender: state.me.email,
+      text: text,
+      timestamp: Date.now(),
+      pending: true,
+      reactions: {},
+      replyToId: state.replyTo || null,
+      editedAt: null,
+      deletedAt: null
+    };
+    state.messagesById[tempId] = optimisticMsg;
+    state.messageOrder.push(tempId);
+    const wasNearBottom = isNearBottom();
+    renderMessages();
+    if (wasNearBottom) ui.messages.scrollTop = ui.messages.scrollHeight;
+    ui.msgInput.value = '';
+    ui.msgInput.style.height = 'auto';
+    hideReplyChip();
+    updateCharCount();
     try {
       await call('api_sendMessage', { convId: state.activeConv.convId, text, replyToId: state.replyTo || '' });
-      ui.msgInput.value = '';
-      ui.msgInput.style.height = 'auto';
-      hideReplyChip();
-      updateCharCount();
-      await pollMessages(false);
-    } catch (e2) { err(e2); }
+      pollMessages(false);
+    } catch (e2) {
+      delete state.messagesById[tempId];
+      state.messageOrder = state.messageOrder.filter(id => id !== tempId);
+      renderMessages();
+      err(e2);
+    }
     finally { updateCharCount(); ui.msgInput.focus(); }
   };
 
